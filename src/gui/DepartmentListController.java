@@ -5,33 +5,31 @@ import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
 
-import javax.swing.text.TabExpander;
-
 import application.Main;
 import gui.listeners.DataChangeListener;
 import gui.util.Alerts;
 import gui.util.Utils;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Pane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 import model.entities.Department;
 import model.services.DepartmentService;
 
-public class DepartmentListController implements Initializable,DataChangeListener {
+public class DepartmentListController implements Initializable, DataChangeListener {
 
 	private DepartmentService service;
 
@@ -45,6 +43,9 @@ public class DepartmentListController implements Initializable,DataChangeListene
 	private TableColumn<Department, String> tableColumnName;
 
 	@FXML
+	private TableColumn<Department, Department> tableColumnEDIT;
+
+	@FXML
 	private Button btNew;
 
 	private ObservableList<Department> obsList;
@@ -53,7 +54,7 @@ public class DepartmentListController implements Initializable,DataChangeListene
 	public void onBtNewAction(ActionEvent event) {
 		Stage parent = Utils.currentStage(event);
 		Department obj = new Department();
-		dialogForm(obj,"/gui/DepartmentForm.fxml",parent);
+		dialogForm(obj, "/gui/DepartmentForm.fxml", parent);
 	}
 
 	public void setDepartmentService(DepartmentService service) {
@@ -80,19 +81,20 @@ public class DepartmentListController implements Initializable,DataChangeListene
 		List<Department> list = service.findAll();
 		obsList = FXCollections.observableArrayList(list);
 		tableViewDepartments.setItems(obsList);
+		initEditButtons();
 	}
 
-	private void dialogForm(Department obj, String path,Stage parentStage) {
+	private void dialogForm(Department obj, String path, Stage parentStage) {
 		try {
 			FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
 			Pane pane = loader.load();
-			
+
 			DepartmentFormControler controler = loader.getController();
 			controler.setDepartment(obj);
 			controler.setDepartmetService(new DepartmentService());
 			controler.subscribeDataChangeListener(this);
 			controler.updateFormData();
-			
+
 			Stage dialogStage = new Stage();
 			dialogStage.setTitle("Enter Department data");
 			dialogStage.setScene(new Scene(pane));
@@ -100,7 +102,7 @@ public class DepartmentListController implements Initializable,DataChangeListene
 			dialogStage.initOwner(parentStage);
 			dialogStage.initModality(Modality.WINDOW_MODAL);
 			dialogStage.showAndWait();
-			
+
 		} catch (IOException e) {
 			Alerts.showAlert("IOException", "Error in load View", e.getLocalizedMessage(), AlertType.ERROR);
 		}
@@ -109,6 +111,25 @@ public class DepartmentListController implements Initializable,DataChangeListene
 	@Override
 	public void onDataChanged() {
 		updateTableView();
+	}
+
+	private void initEditButtons() {
+		tableColumnEDIT.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+		tableColumnEDIT.setCellFactory(param -> new TableCell<Department, Department>() {
+			private final Button button = new Button("edit");
+
+			@Override
+			protected void updateItem(Department obj, boolean empty) {
+				super.updateItem(obj, empty);
+				if (obj == null) {
+					setGraphic(null);
+					return;
+				}
+				setGraphic(button);
+				button.setOnAction(
+						event -> dialogForm(obj, "/gui/DepartmentForm.fxml", Utils.currentStage(event)));
+			}
+		});
 	}
 
 }
